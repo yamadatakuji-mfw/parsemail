@@ -18,6 +18,7 @@ const contentTypeMultipartAlternative = "multipart/alternative"
 const contentTypeMultipartRelated = "multipart/related"
 const contentTypeTextHtml = "text/html"
 const contentTypeTextPlain = "text/plain"
+const contentTypeApplicationOctetStream = "application/octet-stream"
 
 // Parse an email message read from io.Reader into parsemail.Email struct
 func Parse(r io.Reader) (email Email, err error) {
@@ -256,6 +257,17 @@ func parseMultipartMixed(msg io.Reader, boundary string) (textBody, htmlBody str
 			}
 
 			htmlBody += strings.TrimSuffix(string(ppContent[:]), "\n")
+		} else if contentType == contentTypeApplicationOctetStream {
+			at, err := decodeAttachment(part)
+			if err != nil {
+				return textBody, htmlBody, attachments, embeddedFiles, err
+			}
+			if at.Filename == "" {
+				if name, ok := params["name"]; ok {
+					at.Filename = decodeMimeSentence(name)
+				}
+			}
+			attachments = append(attachments, at)
 		} else if isAttachment(part) {
 			at, err := decodeAttachment(part)
 			if err != nil {
@@ -483,7 +495,7 @@ type Email struct {
 	ResentMessageID string
 
 	ContentType string
-	Content io.Reader
+	Content     io.Reader
 
 	HTMLBody string
 	TextBody string
