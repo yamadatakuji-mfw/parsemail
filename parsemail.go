@@ -19,6 +19,7 @@ const contentTypeMultipartRelated = "multipart/related"
 const contentTypeTextHtml = "text/html"
 const contentTypeTextPlain = "text/plain"
 const contentTypeApplicationOctetStream = "application/octet-stream"
+const maxDepthOfMultipartMixed = 3
 
 // Parse an email message read from io.Reader into parsemail.Email struct
 func Parse(r io.Reader) (email Email, err error) {
@@ -40,7 +41,7 @@ func Parse(r io.Reader) (email Email, err error) {
 
 	switch contentType {
 	case contentTypeMultipartMixed:
-		email.TextBody, email.HTMLBody, email.Attachments, email.EmbeddedFiles, err = parseMultipartMixed(msg.Body, params["boundary"])
+		email.TextBody, email.HTMLBody, email.Attachments, email.EmbeddedFiles, err = parseMultipartMixed(msg.Body, params["boundary"], 1)
 	case contentTypeMultipartAlternative:
 		email.TextBody, email.HTMLBody, email.EmbeddedFiles, err = parseMultipartAlternative(msg.Body, params["boundary"])
 	case contentTypeMultipartRelated:
@@ -218,7 +219,10 @@ func parseMultipartAlternative(msg io.Reader, boundary string) (textBody, htmlBo
 	return textBody, htmlBody, embeddedFiles, err
 }
 
-func parseMultipartMixed(msg io.Reader, boundary string) (textBody, htmlBody string, attachments []Attachment, embeddedFiles []EmbeddedFile, err error) {
+func parseMultipartMixed(msg io.Reader, boundary string, depth int) (textBody, htmlBody string, attachments []Attachment, embeddedFiles []EmbeddedFile, err error) {
+	if depth > maxDepthOfMultipartMixed {
+		return textBody, htmlBody, attachments, embeddedFiles, fmt.Errorf("nested multiple/mixed above max depth")
+	}
 	mr := multipart.NewReader(msg, boundary)
 	for {
 		part, err := mr.NextPart()
@@ -243,6 +247,15 @@ func parseMultipartMixed(msg io.Reader, boundary string) (textBody, htmlBody str
 			if err != nil {
 				return textBody, htmlBody, attachments, embeddedFiles, err
 			}
+		} else if contentType == contentTypeMultipartMixed {
+			tb, hb, ats, efs, err := parseMultipartMixed(part, params["boundary"], depth+1)
+			if err != nil {
+				return textBody, htmlBody, attachments, embeddedFiles, err
+			}
+			textBody += tb
+			hb += hb
+			attachments = append(attachments, ats...)
+			embeddedFiles = append(embeddedFiles, efs...)
 		} else if contentType == contentTypeTextPlain {
 			ppContent, err := ioutil.ReadAll(part)
 			if err != nil {
