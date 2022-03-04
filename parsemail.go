@@ -16,6 +16,7 @@ import (
 const contentTypeMultipartMixed = "multipart/mixed"
 const contentTypeMultipartAlternative = "multipart/alternative"
 const contentTypeMultipartRelated = "multipart/related"
+const contentTypeTextCalendar = "text/calendar"
 const contentTypeTextHtml = "text/html"
 const contentTypeTextPlain = "text/plain"
 const contentTypeApplicationOctetStream = "application/octet-stream"
@@ -136,6 +137,12 @@ func parseMultipartRelated(msg io.Reader, boundary string) (textBody, htmlBody s
 			}
 
 			htmlBody += strings.TrimSuffix(string(ppContent[:]), "\n")
+		case contentTypeTextCalendar:
+			ef, err := decodeEmbeddedFile(part)
+			if err != nil {
+				return textBody, htmlBody, embeddedFiles, err
+			}
+			embeddedFiles = append(embeddedFiles, ef)
 		case contentTypeMultipartAlternative:
 			tb, hb, ef, err := parseMultipartAlternative(part, params["boundary"])
 			if err != nil {
@@ -193,6 +200,12 @@ func parseMultipartAlternative(msg io.Reader, boundary string) (textBody, htmlBo
 			}
 
 			htmlBody += strings.TrimSuffix(string(ppContent[:]), "\n")
+		case contentTypeTextCalendar:
+			ef, err := decodeEmbeddedFile(part)
+			if err != nil {
+				return textBody, htmlBody, embeddedFiles, err
+			}
+			embeddedFiles = append(embeddedFiles, ef)
 		case contentTypeMultipartRelated:
 			tb, hb, ef, err := parseMultipartRelated(part, params["boundary"])
 			if err != nil {
@@ -270,6 +283,12 @@ func parseMultipartMixed(msg io.Reader, boundary string, depth int) (textBody, h
 			}
 
 			htmlBody += strings.TrimSuffix(string(ppContent[:]), "\n")
+		} else if contentType == contentTypeTextCalendar {
+			ef, err := decodeEmbeddedFile(part)
+			if err != nil {
+				return textBody, htmlBody, attachments, embeddedFiles, err
+			}
+			embeddedFiles = append(embeddedFiles, ef)
 		} else if contentType == contentTypeApplicationOctetStream {
 			at, err := decodeAttachment(part)
 			if err != nil {
@@ -379,15 +398,13 @@ func decodeContent(content io.Reader, encoding string) (io.Reader, error) {
 		}
 
 		return bytes.NewReader(b), nil
-	case "7bit":
+	case "7bit", "":
 		dd, err := ioutil.ReadAll(content)
 		if err != nil {
 			return nil, err
 		}
 
 		return bytes.NewReader(dd), nil
-	case "":
-		return content, nil
 	default:
 		return nil, fmt.Errorf("unknown encoding: %s", encoding)
 	}
