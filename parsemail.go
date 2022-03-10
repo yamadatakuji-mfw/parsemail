@@ -19,6 +19,7 @@ const contentTypeMultipartRelated = "multipart/related"
 const contentTypeTextCalendar = "text/calendar"
 const contentTypeTextHtml = "text/html"
 const contentTypeTextPlain = "text/plain"
+const contentTypeTextExtension = "text/x-"
 const contentTypeApplicationOctetStream = "application/octet-stream"
 const maxDepthOfMultipartMixed = 3
 
@@ -216,6 +217,9 @@ func parseMultipartAlternative(msg io.Reader, boundary string) (textBody, htmlBo
 			textBody += tb
 			embeddedFiles = append(embeddedFiles, ef...)
 		default:
+			if strings.HasPrefix(contentType, contentTypeTextExtension) {
+				continue
+			}
 			if isEmbeddedFile(part) {
 				ef, err := decodeEmbeddedFile(part)
 				if err != nil {
