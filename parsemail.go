@@ -110,7 +110,7 @@ func parseContentType(contentTypeHeader string) (contentType string, params map[
 func parseMultipartRelated(msg io.Reader, boundary string) (textBody, htmlBody string, attachments []Attachment, embeddedFiles []EmbeddedFile, err error) {
 	pmr := multipart.NewReader(msg, boundary)
 	for {
-		part, err := pmr.NextPart()
+		part, err := NextPart(pmr)
 
 		if err == io.EOF {
 			break
@@ -118,7 +118,7 @@ func parseMultipartRelated(msg io.Reader, boundary string) (textBody, htmlBody s
 			return textBody, htmlBody, attachments, embeddedFiles, err
 		}
 
-		contentType, params, err := mime.ParseMediaType(part.Header.Get("Content-Type"))
+		contentType, params := part.contentType, part.contentTypeParams
 		if err != nil {
 			return textBody, htmlBody, attachments, embeddedFiles, err
 		}
@@ -174,7 +174,7 @@ func parseMultipartRelated(msg io.Reader, boundary string) (textBody, htmlBody s
 func parseMultipartAlternative(msg io.Reader, boundary string) (textBody, htmlBody string, attachments []Attachment, embeddedFiles []EmbeddedFile, err error) {
 	pmr := multipart.NewReader(msg, boundary)
 	for {
-		part, err := pmr.NextPart()
+		part, err := NextPart(pmr)
 
 		if err == io.EOF {
 			break
@@ -182,7 +182,7 @@ func parseMultipartAlternative(msg io.Reader, boundary string) (textBody, htmlBo
 			return textBody, htmlBody, attachments, embeddedFiles, err
 		}
 
-		contentType, params, err := mime.ParseMediaType(part.Header.Get("Content-Type"))
+		contentType, params := part.contentType, part.contentTypeParams
 		if err != nil {
 			return textBody, htmlBody, attachments, embeddedFiles, err
 		}
@@ -252,18 +252,16 @@ func parseMultipartMixed(msg io.Reader, boundary string, depth int) (textBody, h
 	}
 	mr := multipart.NewReader(msg, boundary)
 	for {
-		part, err := mr.NextPart()
+		part, err := NextPart(mr)
 		if err == io.EOF {
 			break
 		} else if err != nil {
 			return textBody, htmlBody, attachments, embeddedFiles, err
 		}
-
-		contentType, params, err := mime.ParseMediaType(part.Header.Get("Content-Type"))
+		contentType, params := part.contentType, part.contentTypeParams
 		if err != nil {
 			return textBody, htmlBody, attachments, embeddedFiles, err
 		}
-
 		if contentType == contentTypeMultipartAlternative {
 			textBody, htmlBody, attachments, embeddedFiles, err = parseMultipartAlternative(part, params["boundary"])
 			if err != nil {
@@ -366,13 +364,13 @@ func decodeHeaderMime(header mail.Header) (mail.Header, error) {
 	return mail.Header(parsedHeader), nil
 }
 
-func isEmbeddedFile(part *multipart.Part) bool {
-	return part.Header.Get("Content-Transfer-Encoding") != ""
+func isEmbeddedFile(part *Part) bool {
+	return part.contentTransferEncoding != ""
 }
 
-func decodeEmbeddedFile(part *multipart.Part) (ef EmbeddedFile, err error) {
+func decodeEmbeddedFile(part *Part) (ef EmbeddedFile, err error) {
 	cid := decodeMimeSentence(part.Header.Get("Content-Id"))
-	decoded, err := decodeContent(part, part.Header.Get("Content-Transfer-Encoding"))
+	decoded, err := decodeContent(part, part.contentTransferEncoding)
 	if err != nil {
 		return
 	}
@@ -384,12 +382,17 @@ func decodeEmbeddedFile(part *multipart.Part) (ef EmbeddedFile, err error) {
 	return
 }
 
-func isAttachment(part *multipart.Part) bool {
-	return part.FileName() != ""
+func isAttachment(part *Part) bool {
+	return part.FileName() != "" || strings.ToLower(part.contentDisposition) == "attachment"
 }
 
-func decodeAttachment(part *multipart.Part) (at Attachment, err error) {
+func decodeAttachment(part *Part) (at Attachment, err error) {
 	filename := decodeMimeSentence(part.FileName())
+	if filename == "" {
+		if name, ok := part.contentTypeParams["name"]; ok {
+			filename = decodeMimeSentence(name)
+		}
+	}
 	decoded, err := decodeContent(part, part.Header.Get("Content-Transfer-Encoding"))
 	if err != nil {
 		return
@@ -546,4 +549,39 @@ type Email struct {
 
 	Attachments   []Attachment
 	EmbeddedFiles []EmbeddedFile
+}
+
+type Part struct {
+	*multipart.Part
+	contentType              string
+	contentTypeParams        map[string]string
+	contentDisposition       string
+	contentDispositionParams map[string]string
+	contentTransferEncoding  string
+}
+
+func NextPart(r *multipart.Reader) (*Part, error) {
+	p, err := r.NextPart()
+	if err != nil {
+		return nil, err
+	}
+	return newPart(p)
+}
+
+func newPart(part *multipart.Part) (out *Part, err error) {
+	out = &Part{
+		Part: part,
+	}
+	out.contentType, out.contentTypeParams, err = mime.ParseMediaType(part.Header.Get("Content-Type"))
+	if err != nil {
+		return nil, err
+	}
+	if part.Header.Get("Content-Disposition") != "" {
+		out.contentDisposition, out.contentDispositionParams, err = mime.ParseMediaType(part.Header.Get("Content-Disposition"))
+		if err != nil {
+			return nil, err
+		}
+	}
+	out.contentTransferEncoding = part.Header.Get("Content-Transfer-Encoding")
+	return out, nil
 }
