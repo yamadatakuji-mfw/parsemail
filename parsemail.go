@@ -549,6 +549,9 @@ type Email struct {
 
 	Attachments   []Attachment
 	EmbeddedFiles []EmbeddedFile
+
+	HTMLBodies []HTMLBody
+	TextBodies []TextBody
 }
 
 type Part struct {
@@ -584,4 +587,16 @@ func newPart(part *multipart.Part) (out *Part, err error) {
 	}
 	out.contentTransferEncoding = part.Header.Get("Content-Transfer-Encoding")
 	return out, nil
+}
+
+type TextBody struct {
+	ContentType string
+	Params      map[string]string
+	Data        io.Reader
+}
+
+type HTMLBody struct {
+	ContentType string
+	Params      map[string]string
+	Data        io.Reader
 }
