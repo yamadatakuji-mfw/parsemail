@@ -715,3 +715,11 @@ func (p *Part) newBody() (*Body, error) {
 		Data:        data,
 	}, nil
 }
+
+func (p *Part) FileName() string {
+	if p.contentDispositionParams != nil {
+		return p.contentDispositionParams["filename"]
+	}
+
+	return ""
+}
