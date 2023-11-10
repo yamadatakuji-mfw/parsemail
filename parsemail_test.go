@@ -372,15 +372,15 @@ So, "Hello".`,
 			htmlBody:  "<div dir=\"ltr\"><br></div>",
 			attachments: []attachmentData{
 				{
-					filename:      "unencoded.csv",
-					contentType:   "application/csv",
-					data: fmt.Sprintf("\n"+`"%s", "%s", "%s", "%s", "%s"`+"\n"+`"%s", "%s", "%s", "%s", "%s"`+"\n", "Some", "Data", "In", "Csv", "Format", "Foo", "Bar", "Baz", "Bum", "Poo"),
+					filename:    "unencoded.csv",
+					contentType: "application/csv",
+					data:        fmt.Sprintf("\n"+`"%s", "%s", "%s", "%s", "%s"`+"\n"+`"%s", "%s", "%s", "%s", "%s"`+"\n", "Some", "Data", "In", "Csv", "Format", "Foo", "Bar", "Baz", "Bum", "Poo"),
 				},
 			},
 		},
 		13: {
 			contentType: "multipart/related; boundary=\"000000000000ab2e2205a26de587\"",
-			mailData:   multipartRelatedExample,
+			mailData:    multipartRelatedExample,
 			subject:     "Saying Hello",
 			from: []mail.Address{
 				{
@@ -389,7 +389,7 @@ So, "Hello".`,
 				},
 			},
 			sender: mail.Address{
-				Name: "Michael Jones",
+				Name:    "Michael Jones",
 				Address: "mjones@machine.example",
 			},
 			to: []mail.Address{
@@ -401,7 +401,39 @@ So, "Hello".`,
 			messageID: "1234@local.machine.example",
 			date:      parseDate("Fri, 21 Nov 1997 09:55:06 -0600"),
 			htmlBody:  "<div dir=\"ltr\"><div>Time for the egg.</div><div><br></div><div><br><br></div></div>",
-			textBody: "Time for the egg.",
+			textBody:  "Time for the egg.",
+		},
+		14: {
+			contentType: "multipart/signed; protocol=\"application/pkcs7-signature\"; micalg=sha-256; boundary=\"----=_Part_746216_364383494.1698130589208\"",
+			mailData:    multipartSignedExample,
+			subject:     "Saying Hello",
+			from: []mail.Address{
+				{
+					Name:    "John Doe",
+					Address: "jdoe@machine.example",
+				},
+			},
+			sender: mail.Address{
+				Name:    "Michael Jones",
+				Address: "mjones@machine.example",
+			},
+			to: []mail.Address{
+				{
+					Name:    "Mary Smith",
+					Address: "mary@example.net",
+				},
+			},
+			messageID: "1234@local.machine.example",
+			date:      parseDate("Fri, 21 Nov 1997 09:55:06 -0600"),
+			htmlBody:  "<div dir=\"ltr\"><div>Time for the egg.</div><div><br></div><div><br><br></div></div>",
+			textBody:  "Time for the egg.",
+			attachments: []attachmentData{
+				{
+					filename:    "smime.p7s",
+					contentType: "application/pkcs7-signature",
+					data:        "",
+				},
+			},
 		},
 	}
 
@@ -595,9 +627,9 @@ func parseDate(in string) time.Time {
 }
 
 type attachmentData struct {
-	filename      string
-	contentType   string
-	data          string
+	filename    string
+	contentType string
+	data        string
 }
 
 type embeddedFileData struct {
@@ -806,8 +838,8 @@ Message-ID: <5678.21-Nov-1997@example.com>
 Hi everyone.
 `
 
-//todo: not yet implemented in net/mail
-//once there is support for this, add it
+// todo: not yet implemented in net/mail
+// once there is support for this, add it
 var rfc5322exampleA13 = `From: Pete <pete@silly.example>
 To: A Group:Ed Jones <c@a.test>,joe@where.test,John <jdoe@one.test>;
 Cc: Undisclosed recipients:;
@@ -817,7 +849,7 @@ Message-ID: <testabcd.1234@silly.example>
 Testing.
 `
 
-//we skipped the first message bcause it's the same as A 1.1
+// we skipped the first message bcause it's the same as A 1.1
 var rfc5322exampleA2a = `From: Mary Smith <mary@example.net>
 To: John Doe <jdoe@machine.example>
 Reply-To: "Mary Smith: Personal Account" <smith@home.example>
@@ -945,4 +977,47 @@ Content-Disposition: attachment;
 "Foo", "Bar", "Baz", "Bum", "Poo"
 
 --f403045f1dcc043a44054c8e6bbf--
+`
+
+var multipartSignedExample = `MIME-Version: 1.0
+From: John Doe <jdoe@machine.example>
+Sender: Michael Jones <mjones@machine.example>
+To: Mary Smith <mary@example.net>
+Subject: Saying Hello
+Date: Fri, 21 Nov 1997 09:55:06 -0600
+Message-ID: <1234@local.machine.example>
+Subject: ooops
+To: test@example.rocks
+Content-Type: multipart/signed; protocol="application/pkcs7-signature"; micalg=sha-256;
+	boundary="----=_Part_746216_364383494.1698130589208"
+X-Comments:
+Feedback-ID: 1.ap-northeast-1.Pw8FL2ZI4Ah4ultEiAJulZI5IJxZ/+eKa4j/3x7HjXU=:AmazonSES
+X-SES-Outgoing: 2023.10.24-23.251.234.52
+
+------=_Part_746216_364383494.1698130589208
+Content-Type: multipart/alternative; 
+	boundary="----=_Part_35927_1100954179.1698130587742"
+
+------=_Part_35927_1100954179.1698130587742
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: quoted-printable
+
+Time for the egg.
+
+------=_Part_35927_1100954179.1698130587742
+Content-Type: text/html; charset=UTF-8
+Content-Transfer-Encoding: quoted-printable
+
+<div dir="ltr"><div>Time for the egg.</div><div><br></div><div><br><br></div></div>
+
+------=_Part_35927_1100954179.1698130587742--
+
+------=_Part_746216_364383494.1698130589208
+Content-Type: application/pkcs7-signature; name=smime.p7s; smime-type=signed-data
+Content-Transfer-Encoding: base64
+Content-Disposition: attachment; filename="smime.p7s"
+Content-Description: S/MIME Cryptographic Signature
+
+
+------=_Part_746216_364383494.1698130589208--
 `
