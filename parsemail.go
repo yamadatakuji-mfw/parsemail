@@ -14,6 +14,7 @@ import (
 	"time"
 )
 
+const contentTypeMultipartSigned = "multipart/signed"
 const contentTypeMultipartMixed = "multipart/mixed"
 const contentTypeMultipartAlternative = "multipart/alternative"
 const contentTypeMultipartRelated = "multipart/related"
@@ -43,6 +44,8 @@ func Parse(r io.Reader) (email Email, err error) {
 	}
 
 	switch contentType {
+	case contentTypeMultipartSigned:
+		email.TextBody, email.HTMLBody, email.Attachments, email.EmbeddedFiles, email.TextBodies, email.HTMLBodies, err = parseMultipartMixed(msg.Body, params["boundary"], 1)
 	case contentTypeMultipartMixed:
 		email.TextBody, email.HTMLBody, email.Attachments, email.EmbeddedFiles, email.TextBodies, email.HTMLBodies, err = parseMultipartMixed(msg.Body, params["boundary"], 1)
 	case contentTypeMultipartAlternative:
