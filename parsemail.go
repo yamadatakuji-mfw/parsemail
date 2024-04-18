@@ -324,6 +324,14 @@ func parseMultipartMixed(msg io.Reader, boundary string, depth int) (textBody, h
 		} else if err != nil {
 			return textBody, htmlBody, attachments, embeddedFiles, textBodies, htmlBodies, err
 		}
+		if isAttachment(part) {
+			at, err := decodeAttachment(part)
+			if err != nil {
+				return textBody, htmlBody, attachments, embeddedFiles, textBodies, htmlBodies, err
+			}
+			attachments = append(attachments, at)
+			continue
+		}
 		contentType, params := part.contentType, part.contentTypeParams
 		if err != nil {
 			return textBody, htmlBody, attachments, embeddedFiles, textBodies, htmlBodies, err
@@ -403,13 +411,6 @@ func parseMultipartMixed(msg io.Reader, boundary string, depth int) (textBody, h
 					at.Filename = decodeMimeSentence(name)
 				}
 			}
-			attachments = append(attachments, at)
-		} else if isAttachment(part) {
-			at, err := decodeAttachment(part)
-			if err != nil {
-				return textBody, htmlBody, attachments, embeddedFiles, textBodies, htmlBodies, err
-			}
-
 			attachments = append(attachments, at)
 		} else {
 			return textBody, htmlBody, attachments, embeddedFiles, textBodies, htmlBodies, fmt.Errorf("Unknown multipart/mixed nested mime type: %s", contentType)
