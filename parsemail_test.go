@@ -435,6 +435,37 @@ So, "Hello".`,
 				},
 			},
 		},
+		15: {
+			contentType: "multipart/signed; protocol=\"application/pkcs7-signature\"; micalg=sha-256; boundary=\"----=_Part_746216_364383494.1698130589208\"",
+			mailData:    htmlAttachmentExample,
+			subject:     "Saying Hello",
+			from: []mail.Address{
+				{
+					Name:    "John Doe",
+					Address: "jdoe@machine.example",
+				},
+			},
+			sender: mail.Address{
+				Name:    "Michael Jones",
+				Address: "mjones@machine.example",
+			},
+			to: []mail.Address{
+				{
+					Name:    "Mary Smith",
+					Address: "mary@example.net",
+				},
+			},
+			messageID: "1234@local.machine.example",
+			date:      parseDate("Fri, 21 Nov 1997 09:55:06 -0600"),
+			htmlBody:  "PGRpdiBkaXI9Imx0ciI+PGRpdj5UaGlzIGlzIGEgcmVjZWlwdC48L2Rpdj48ZGl2Pjxicj48L2Rp\ndj48ZGl2Pjxicj48YnI+PC9kaXY+PC9kaXY+",
+			attachments: []attachmentData{
+				{
+					filename:    "Receipt.html",
+					contentType: "text/html",
+					data:        "<div dir=\"ltr\"><div>This is a receipt.</div><div><br></div><div><br><br></div></div>",
+				},
+			},
+		},
 	}
 
 	for index, td := range testData {
@@ -1019,5 +1050,36 @@ Content-Disposition: attachment; filename="smime.p7s"
 Content-Description: S/MIME Cryptographic Signature
 
 
+------=_Part_746216_364383494.1698130589208--
+`
+
+var htmlAttachmentExample = `MIME-Version: 1.0
+From: John Doe <jdoe@machine.example>
+Sender: Michael Jones <mjones@machine.example>
+To: Mary Smith <mary@example.net>
+Subject: Saying Hello
+Date: Fri, 21 Nov 1997 09:55:06 -0600
+Message-ID: <1234@local.machine.example>
+Subject: ooops
+To: test@example.rocks
+Content-Type: multipart/signed; protocol="application/pkcs7-signature"; micalg=sha-256;
+	boundary="----=_Part_746216_364383494.1698130589208"
+X-Comments:
+Feedback-ID: 1.ap-northeast-1.Pw8FL2ZI4Ah4ultEiAJulZI5IJxZ/+eKa4j/3x7HjXU=:AmazonSES
+X-SES-Outgoing: 2023.10.24-23.251.234.52
+
+------=_Part_746216_364383494.1698130589208
+Content-Transfer-Encoding: base64
+Content-Type: text/html; charset=UTF-8
+
+PGRpdiBkaXI9Imx0ciI+PGRpdj5UaGlzIGlzIGEgcmVjZWlwdC48L2Rpdj48ZGl2Pjxicj48L2Rp
+dj48ZGl2Pjxicj48YnI+PC9kaXY+PC9kaXY+
+------=_Part_746216_364383494.1698130589208
+Content-Disposition: attachment; filename="Receipt.html"
+Content-Transfer-Encoding: base64
+Content-Type: text/html; charset=utf-8; name="Receipt.html"
+
+PGRpdiBkaXI9Imx0ciI+PGRpdj5UaGlzIGlzIGEgcmVjZWlwdC48L2Rpdj48ZGl2Pjxicj48L2Rp
+dj48ZGl2Pjxicj48YnI+PC9kaXY+PC9kaXY+
 ------=_Part_746216_364383494.1698130589208--
 `
